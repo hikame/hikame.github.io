@@ -136,8 +136,8 @@
 <li>contract_address，代表该合约被顺利部署到以太坊网络后的合约地址，其他节点要想调用合约代码，需要获知该地址以便发送函数调用消息。</li>
 </ol>
 <p><strong>合约代码部署结果的截图如下：</strong><br><img src="https://hikame.github.io/2018/05/10//在私有以太坊上实现针对ERC20数字货币ProxyOverflow漏洞的攻击/deployment_result.png" alt="deployment_result"></p>
-<p>##　2.3 ProxyOverflow漏洞攻击<br>在节点2上，利用<a href="https://github.com/zhanlulab/Exploit_SMT_ProxyOverflow/blob/master/test_SMT.py" target="_blank" rel="noopener">test_SMT.py</a>脚本中的代码可实现针对SMT合约的一键攻击。</p>
-<p><strong>关于执行前的配置的介绍：</strong></p>
+<h2 id="2-3-ProxyOverflow漏洞攻击"><a href="#2-3-ProxyOverflow漏洞攻击" class="headerlink" title="2.3 ProxyOverflow漏洞攻击"></a>2.3 ProxyOverflow漏洞攻击</h2><p>在节点2上，利用<a href="https://github.com/zhanlulab/Exploit_SMT_ProxyOverflow/blob/master/test_SMT.py" target="_blank" rel="noopener">test_SMT.py</a>脚本中的代码可实现针对SMT合约的一键攻击。</p>
+<p><strong>关于执行前的配置的介绍:</strong></p>
 <ol>
 <li>contract_address，来自2.2中SMT部署完成后的输出值；</li>
 <li>sol_path，代表合约代码路径；</li>
@@ -158,12 +158,13 @@
 <li>63-77行，构造transferProxy函数调用参数，进行函数调用，并获取交易回执；</li>
 <li>79-80行，获取并打印sender和signer在攻击后的SMT币数目。</li>
 </ol>
-<p><strong>攻击结果的截图如下：</strong><br><img src="https://hikame.github.io/2018/05/10//在私有以太坊上实现针对ERC20数字货币ProxyOverflow漏洞的攻击/attack_result.png" alt="attack_result"></p>
+<p><strong>攻击结果的截图如下：</strong></p>
+<p><img src="https://hikame.github.io/2018/05/10//在私有以太坊上实现针对ERC20数字货币ProxyOverflow漏洞的攻击/attack_result.png" alt="attack_result"></p>
 
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://hikame.github.io/2018/05/10/在私有以太坊上实现针对ERC20数字货币ProxyOverflow漏洞的攻击/" data-id="cjh07ff1r0001q9vxh220b3sv" class="article-share-link">Share</a>
+      <a data-url="http://hikame.github.io/2018/05/10/在私有以太坊上实现针对ERC20数字货币ProxyOverflow漏洞的攻击/" data-id="cjh07jkgd0001y6vxd3bxtjaz" class="article-share-link">Share</a>
       
       
     </footer>
@@ -207,7 +208,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://hikame.github.io/2018/05/10/SMT币BatchOverflow漏洞分析笔记/" data-id="cjh07ff1e0000q9vxu59l9jlp" class="article-share-link">Share</a>
+      <a data-url="http://hikame.github.io/2018/05/10/SMT币BatchOverflow漏洞分析笔记/" data-id="cjh07jkg00000y6vxra5qe15q" class="article-share-link">Share</a>
       
       
     </footer>
