@@ -89,14 +89,14 @@
 <p>根据Input Data中的信息，定位到SMT中发生错误的智能合约函数transferProxy，该函数主要用于没有以太币的SMT拥有者，将签署过的交易信息交由第三方节点进行发布，并对该节点发送SMT币以进行补偿。 </p>
 <p><img src="./SMT币BatchOverflow漏洞分析笔记/smt_sourcecode.png" alt="smt_sourcecode" title="SMT合约transferProxy函数源码"></p>
 <p> 该函数的第一行对于此次交易转出者的余额进行校验。交易记录中的0-6变量依次对应于该函数的７个参数，此处的_feeSmt + _value实际为：</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">0x7000000000000000000000000000000000000000000000000000000000000001 +  </span><br><span class="line"></span><br><span class="line">0x8fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff</span><br></pre></td></tr></table></figure>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">0x7000000000000000000000000000000000000000000000000000000000000001 +  </span><br><span class="line">0x8fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff</span><br></pre></td></tr></table></figure>
 <p>运算结果会被映射为uint256型数据，因此将会发生无符号整型数据的上溢，使计算结果为0，从而绕过了此处检查。这最终将导致msg.sender（发送交易消息的节点）和_to（钱币接受者）代表的钱包收到大量货币。这一过程被同样被记录在了以太坊的交易记录中，如下图最后两条记录所示，而后续发生的交易则是攻击者向其他钱包进行钱币转移的操作。</p>
 <p><img src="./SMT币BatchOverflow漏洞分析笔记/smt_transaction.png" alt="smt_sourcecode" title="SMT合约异常交易记录"></p>
 
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://hikame.github.io/2018/05/10/SMT币BatchOverflow漏洞分析笔记/" data-id="cjh0063wf0000wuvxhnwdsd12" class="article-share-link">Share</a>
+      <a data-url="http://hikame.github.io/2018/05/10/SMT币BatchOverflow漏洞分析笔记/" data-id="cjh00a2br000046vx2po7z6zc" class="article-share-link">Share</a>
       
       
     </footer>
