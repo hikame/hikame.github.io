@@ -84,20 +84,86 @@
     
     <div class="article-entry" itemprop="articleBody">
       
-        <p>此次漏洞发生的虚拟货币为SmartMesh，目前该货币以以太坊智能合约的形式发布，Token为0x55f93985431fc9304077687a35a1ba103dc1e081，最初触发漏洞的交易记录于如下图交易记录上:</p>
-<p><img src="./SMT币BatchOverflow漏洞分析笔记/transaction_info.png" alt="transaction_info" title="记录攻击行为的交易信息"></p>
-<p>根据Input Data中的信息，定位到SMT中发生错误的智能合约函数transferProxy，该函数主要用于没有以太币的SMT拥有者，将签署过的交易信息交由第三方节点进行发布，并对该节点发送SMT币以进行补偿。</p>
-<p><img src="./SMT币BatchOverflow漏洞分析笔记/smt_sourcecode.png" alt="smt_sourcecode" title="SMT合约transferProxy函数源码"></p>
-<p> 该函数的第一行对于此次交易转出者的余额进行校验。交易记录中的0-6变量依次对应于该函数的７个参数，此处的_feeSmt + _value实际为：</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">0x7000000000000000000000000000000000000000000000000000000000000001 +</span><br><span class="line">0x8fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff</span><br></pre></td></tr></table></figure>
-<p>运算结果会被映射为uint256型数据，因此将会发生无符号整型数据的上溢，使计算结果为0，从而绕过了此处检查。这最终将导致msg.sender（发送交易消息的节点）和_to（钱币接受者）代表的钱包收到大量货币。这一过程被同样被记录在了以太坊的交易记录中，如下图最后两条记录所示，而后续发生的交易则是攻击者向其他钱包进行钱币转移的操作。</p>
-<p><img src="./SMT币BatchOverflow漏洞分析笔记/smt_transaction.png" alt="smt_sourcecode" title="SMT合约异常交易记录"></p>
-<p>finish</p>
+        <p>ERC20的ProxyOverflow漏洞造成影响广泛，本文将对其攻击方法进行分析，以便于智能合约发布者提高自身代码安全性以及其他研究人员进行测试。本文选择传播广泛、影响恶劣的SMT漏洞（CVE-2018–10376）作为样本进行分析，文中所涉及的代码截图均来自于SMT代码。由于目前各大交易平台已经将ERC20协议的数字货币交易叫停，本文的发布不会对这些货币带来直接影响。 </p>
+<h1 id="1-ERC20货币及transferProxy函数"><a href="#1-ERC20货币及transferProxy函数" class="headerlink" title="1. ERC20货币及transferProxy函数"></a>1. ERC20货币及transferProxy函数</h1><h2 id="1-1-ERC20货币简介"><a href="#1-1-ERC20货币简介" class="headerlink" title="1.1 ERC20货币简介"></a>1.1 ERC20货币简介</h2><p>基于ERC20协议的数字货币（以下简称为ERC20货币）实际上是以太坊上运行的智能合约，合约中对于每个账户拥有的货币数目是通过 <em>账户地址→货币数</em> 的映射关系进行的记录：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">mapping (address =&gt; uint256) balances</span><br></pre></td></tr></table></figure>
+<p>ERC20货币的拥有者要想进行货币交易、余额查询等操作时，需要向智能合约对应的地址发送消息，声明调用的函数和相应参数。这一消息将会矿机接收，并执行智能合约中相应的函数代码。在这一过程中，消息发送者需要向挖矿成功的矿机支付相应的报酬。这笔报酬在以太坊中被称作gas，其支付货币为以太币。也就是说，ERC20的货币拥有者要想发送货币交易消息，就需要拥有一定数量的以太币。</p>
+<p>然而，ERC20货币拥有者并不一定拥有以太币。为了满足他们发起货币交易的需求，ERC20 协议提供了transferProxy函数。利用该函数，ERC20货币拥有者可以签署一个交易消息，并交由拥有以太币的第三方节点将其发送到以太坊上。消息的发送者会从拥有者那里获取一定数量的ERC20货币作为其发送消息的代理费用。</p>
+<h2 id="1-2-transferProxy函数代码分析"><a href="#1-2-transferProxy函数代码分析" class="headerlink" title="1.2 transferProxy函数代码分析"></a>1.2 transferProxy函数代码分析</h2><p>SMT的transferProxy函数代码如下图所示：</p>
+<p><img src="/home/kame/workspace/hexo_workstation/source/_posts/在私有以太坊上实现针对ERC20数字货币ProxyOverflow漏洞的攻击/SMT合约transferProxy函数.png" alt="SMT合约transferProxy函数"></p>
+<p>该函数的各个参数解释如下，该函数代码逻辑较为简单，此处不做赘述。</p>
+<ul>
+<li>address _from：ERC20     货币的拥有者和交易的发起者；</li>
+<li><p>address _to：货币交易中的接收者；</p>
+</li>
+<li><p>uint256 _value：货币交易的数额；</p>
+</li>
+<li>uint256 _feeSmt：交易信息发送者（即函数中msg.sender）收取的代理费用；</li>
+<li>uint _v，bytes32 _r，bytes32 _s：交易发起者（即_from）生成的签名数据。</li>
+</ul>
+<p>需注意的是，代码215行中的transferAllowed(_from)是transferProxy()运行前必会运行的验证函数。该函数代码如下： </p>
+<p><img src="/home/kame/workspace/hexo_workstation/source/_posts/在私有以太坊上实现针对ERC20数字货币ProxyOverflow漏洞的攻击/SMT.transferAllowed.png" alt="SMT.transferAllowed"></p>
+<p>代码117行中的exclude为映射结构，仅合约的创建者将为设置为True，其他地址默认均为False。</p>
+<p>代码118行判定transferEnabled标志符是否为true，该标志只能通过enableTransfer函数设定，且该函数只能被合约创建者调用，该函数的作用是使得ERC20合约的交易过程可控，这也是SMT等货币出现问题时能够在后续中止交易的原因：</p>
+<p><img src="/home/kame/workspace/hexo_workstation/source/_posts/在私有以太坊上实现针对ERC20数字货币ProxyOverflow漏洞的攻击/SMT.enableTransfer.png" alt="SMT.enableTransfer"></p>
+<p><img src="/home/kame/workspace/hexo_workstation/source/_posts/在私有以太坊上实现针对ERC20数字货币ProxyOverflow漏洞的攻击/SMT.onlyOwner.png" alt="SMT.onlyOwner"></p>
+<p>代码119-121行对于交易发送者（即_from）帐号是否被锁定进行了检查，lockFlag和locked都只能被合约创建者所控制： </p>
+<p><img src="/home/kame/workspace/hexo_workstation/source/_posts/在私有以太坊上实现针对ERC20数字货币ProxyOverflow漏洞的攻击/lock_defines.png" alt="lock_defines"></p>
+<p><img src="/home/kame/workspace/hexo_workstation/source/_posts/在私有以太坊上实现针对ERC20数字货币ProxyOverflow漏洞的攻击/lock_functions.png" alt="lock_functions"></p>
+<h1 id="2-攻击重现"><a href="#2-攻击重现" class="headerlink" title="2. 攻击重现"></a>2. 攻击重现</h1><p>为了重现攻击，我们选择了基于go语言编写的以太坊客户端geth进行以太坊私有网络的部署。为了便于实现可编程的自动化交互，我们选择了<a href="http://web3py.readthedocs.io/en/stable/index.html" target="_blank" rel="noopener">Web3.py</a>作为与以太坊节点交互的中间件。 </p>
+<p>##　2.1漏洞验证环境的搭建</p>
+<ol>
+<li>从<a href="https://etherscan.io/address/0x55f93985431fc9304077687a35a1ba103dc1e081#code" target="_blank" rel="noopener">链接页面</a>下载SMT智能合约源码；</li>
+<li>创建两台Linux虚拟机；</li>
+<li>准备Python运行环境，在两台虚拟机上安装python3，并利用pip安装web3、py-solc、hexbytes、attrdict；</li>
+<li>准备合约编译环境，在两台虚拟机上安装智能合约代码编译器solc，参考<a href="http://solidity.readthedocs.io/en/v0.4.21/installing-solidity.html" target="_blank" rel="noopener">链接</a>；</li>
+<li>在两台虚拟机上搭建以太坊私有网络，可参考<a href="http://www.ethdocs.org/en/latest/network/test-networks.html#id3" target="_blank" rel="noopener">链接</a>，其中：<ul>
+<li>节点1用于发布SMT合约代码，为其创建以太坊账户并分配一定数量以太币，启动挖矿；</li>
+<li>节点2用于部署攻击代码，创建两个以太坊账户，分别作为transferProxy中的from账户（转账消息签署者，记为Signer）和transferProxy调用者（即转账消息的发送者，记为Sender），为Sender分配一定数量以太币，并启动挖矿。</li>
+</ul>
+</li>
+</ol>
+<h2 id="2-2-SMT智能合约发布"><a href="#2-2-SMT智能合约发布" class="headerlink" title="2.2 SMT智能合约发布"></a>2.2 SMT智能合约发布</h2><p>在节点1上，利用<a href="https://github.com/zhanlulab/Exploit_SMT_ProxyOverflow/blob/master/deploy_SMT.py" target="_blank" rel="noopener">deploy_SMT.py</a>脚本中的代码实现SMT智能合约的一键部署。</p>
+<p><strong>关于执行前的配置的介绍：</strong></p>
+<ol>
+<li>sol_path，代表合约代码路径；</li>
+<li>account，代表用于发布合约的账户，如1.2所示，只有该账户才能调用部署好的智能合约函数，进行控制交易开启和关闭，维护被锁账户列表等操作；</li>
+<li>pin，用于解锁account的密码。</li>
+</ol>
+<p><strong>关于执行过程与结果的分析：</strong></p>
+<ol>
+<li>tx_receipt，该变量用于获取部署智能合约（23行）和发送启动交易消息（35行）的结果，当这两行代码被调用后，以太坊网络中会发布相应的消息，只有在下一个区块被挖掘出来后，tx_receipt才能获取非空的结果；</li>
+<li>contract_address，代表该合约被顺利部署到以太坊网络后的合约地址，其他节点要想调用合约代码，需要获知该地址以便发送函数调用消息。</li>
+</ol>
+<p><strong>合约代码部署结果的截图如下：</strong><br><img src="/home/kame/workspace/hexo_workstation/source/_posts/在私有以太坊上实现针对ERC20数字货币ProxyOverflow漏洞的攻击/deployment_result.png" alt="deployment_result"></p>
+<p>##　2.3 ProxyOverflow漏洞攻击<br>在节点2上，利用<a href="https://github.com/zhanlulab/Exploit_SMT_ProxyOverflow/blob/master/test_SMT.py" target="_blank" rel="noopener">test_SMT.py</a>脚本中的代码可实现针对SMT合约的一键攻击。</p>
+<p><strong>关于执行前的配置的介绍：</strong></p>
+<ol>
+<li>contract_address，来自2.2中SMT部署完成后的输出值；</li>
+<li>sol_path，代表合约代码路径；</li>
+<li>signer，交易信息的签署者，也将作为调用transferProxy时的_from和_to的实参；</li>
+<li>sender，交易信息的发送者，需要拥有一定数量以太坊以支付gas费用；</li>
+<li>signer_pin，signer的密钥解锁口令，以便对交易信息进行签名；</li>
+<li>sender_pin，sender的密钥解锁口令，以便解锁sender账户，支付gas费用；</li>
+<li>value，代表发生交易的金额；</li>
+<li>fee，代表支付给sender的代理费用；</li>
+<li>signer_key_path，代表signer的密钥文件路径。</li>
+</ol>
+<p><strong>关于执行过程与结果的分析：</strong></p>
+<ol>
+<li>30-35行，基于目标智能合约地址和代码，创建智能合约对象；</li>
+<li>37-38行，获取并打印sender和signer在攻击前的SMT币数目；</li>
+<li>40-43行，获取signer现有的nonce的值，并将其扩充为64字符的字符串；</li>
+<li>46-62行，构建要进行签名的数据的Hash值，获取signer的私有密钥，并对Hash值进行签名，获得签名数据s，r，v；</li>
+<li>63-77行，构造transferProxy函数调用参数，进行函数调用，并获取交易回执；</li>
+<li>79-80行，获取并打印sender和signer在攻击后的SMT币数目。</li>
+</ol>
+<p><strong>攻击结果的截图如下：</strong><br><img src="/home/kame/workspace/hexo_workstation/source/_posts/在私有以太坊上实现针对ERC20数字货币ProxyOverflow漏洞的攻击/attack_result.png" alt="attack_result"></p>
 
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://hikame.github.io/2018/05/10/在私有以太坊上实现针对ERC20数字货币ProxyOverflow漏洞的攻击/" data-id="cjh05z9dr000018vxor9hpoy5" class="article-share-link">Share</a>
+      <a data-url="http://hikame.github.io/2018/05/10/在私有以太坊上实现针对ERC20数字货币ProxyOverflow漏洞的攻击/" data-id="cjh07dmf30001m6vx3fn0vm4t" class="article-share-link">Share</a>
       
       
     </footer>
@@ -137,12 +203,11 @@
 <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">0x7000000000000000000000000000000000000000000000000000000000000001 +</span><br><span class="line">0x8fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff</span><br></pre></td></tr></table></figure>
 <p>运算结果会被映射为uint256型数据，因此将会发生无符号整型数据的上溢，使计算结果为0，从而绕过了此处检查。这最终将导致msg.sender（发送交易消息的节点）和_to（钱币接受者）代表的钱包收到大量货币。这一过程被同样被记录在了以太坊的交易记录中，如下图最后两条记录所示，而后续发生的交易则是攻击者向其他钱包进行钱币转移的操作。</p>
 <p><img src="https://hikame.github.io/2018/05/10/SMT%E5%B8%81BatchOverflow%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90%E7%AC%94%E8%AE%B0/smt_transaction.png" alt="smt_sourcecode" title="SMT合约异常交易记录"></p>
-<p>finish</p>
 
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://hikame.github.io/2018/05/10/SMT币BatchOverflow漏洞分析笔记/" data-id="cjh05z9dy000118vx9j0ld9n9" class="article-share-link">Share</a>
+      <a data-url="http://hikame.github.io/2018/05/10/SMT币BatchOverflow漏洞分析笔记/" data-id="cjh07dmet0000m6vxcyk5mavf" class="article-share-link">Share</a>
       
       
     </footer>
