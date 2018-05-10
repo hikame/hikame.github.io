@@ -5,23 +5,23 @@
   
 
   
-  <title>SMT币BatchOverflow漏洞分析笔记 | Kame Wang&#39;s Blog</title>
+  <title>在私有以太坊上实现针对ERC20数字货币ProxyOverflow漏洞的攻击 | Kame Wang&#39;s Blog</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
   <meta name="description" content="此次漏洞发生的虚拟货币为SmartMesh，目前该货币以以太坊智能合约的形式发布，Token为0x55f93985431fc9304077687a35a1ba103dc1e081，最初触发漏洞的交易记录于如下图交易记录上:  根据Input Data中的信息，定位到SMT中发生错误的智能合约函数transferProxy，该函数主要用于没有以太币的SMT拥有者，将签署过的交易信息交由第三方节点进行">
 <meta property="og:type" content="article">
-<meta property="og:title" content="SMT币BatchOverflow漏洞分析笔记">
-<meta property="og:url" content="http://hikame.github.io/2018/05/10/SMT币BatchOverflow漏洞分析笔记/index.html">
+<meta property="og:title" content="在私有以太坊上实现针对ERC20数字货币ProxyOverflow漏洞的攻击">
+<meta property="og:url" content="http://hikame.github.io/2018/05/10/在私有以太坊上实现针对ERC20数字货币ProxyOverflow漏洞的攻击/index.html">
 <meta property="og:site_name" content="Kame Wang&#39;s Blog">
 <meta property="og:description" content="此次漏洞发生的虚拟货币为SmartMesh，目前该货币以以太坊智能合约的形式发布，Token为0x55f93985431fc9304077687a35a1ba103dc1e081，最初触发漏洞的交易记录于如下图交易记录上:  根据Input Data中的信息，定位到SMT中发生错误的智能合约函数transferProxy，该函数主要用于没有以太币的SMT拥有者，将签署过的交易信息交由第三方节点进行">
 <meta property="og:locale" content="default">
-<meta property="og:image" content="http://hikame.github.io/2018/05/10/SMT币BatchOverflow漏洞分析笔记/SMT币BatchOverflow漏洞分析笔记/transaction_info.png">
-<meta property="og:image" content="http://hikame.github.io/2018/05/10/SMT币BatchOverflow漏洞分析笔记/SMT币BatchOverflow漏洞分析笔记/smt_sourcecode.png">
-<meta property="og:image" content="http://hikame.github.io/2018/05/10/SMT币BatchOverflow漏洞分析笔记/SMT币BatchOverflow漏洞分析笔记/smt_transaction.png">
-<meta property="og:updated_time" content="2018-05-10T04:11:55.545Z">
+<meta property="og:image" content="http://hikame.github.io/2018/05/10/在私有以太坊上实现针对ERC20数字货币ProxyOverflow漏洞的攻击/SMT币BatchOverflow漏洞分析笔记/transaction_info.png">
+<meta property="og:image" content="http://hikame.github.io/2018/05/10/在私有以太坊上实现针对ERC20数字货币ProxyOverflow漏洞的攻击/SMT币BatchOverflow漏洞分析笔记/smt_sourcecode.png">
+<meta property="og:image" content="http://hikame.github.io/2018/05/10/在私有以太坊上实现针对ERC20数字货币ProxyOverflow漏洞的攻击/SMT币BatchOverflow漏洞分析笔记/smt_transaction.png">
+<meta property="og:updated_time" content="2018-05-10T06:37:02.488Z">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="SMT币BatchOverflow漏洞分析笔记">
+<meta name="twitter:title" content="在私有以太坊上实现针对ERC20数字货币ProxyOverflow漏洞的攻击">
 <meta name="twitter:description" content="此次漏洞发生的虚拟货币为SmartMesh，目前该货币以以太坊智能合约的形式发布，Token为0x55f93985431fc9304077687a35a1ba103dc1e081，最初触发漏洞的交易记录于如下图交易记录上:  根据Input Data中的信息，定位到SMT中发生错误的智能合约函数transferProxy，该函数主要用于没有以太币的SMT拥有者，将签署过的交易信息交由第三方节点进行">
-<meta name="twitter:image" content="http://hikame.github.io/2018/05/10/SMT币BatchOverflow漏洞分析笔记/SMT币BatchOverflow漏洞分析笔记/transaction_info.png">
+<meta name="twitter:image" content="http://hikame.github.io/2018/05/10/在私有以太坊上实现针对ERC20数字货币ProxyOverflow漏洞的攻击/SMT币BatchOverflow漏洞分析笔记/transaction_info.png">
   
     <link rel="alternate" href="/atom.xml" title="Kame Wang&#39;s Blog" type="application/atom+xml">
   
@@ -68,10 +68,10 @@
   </div>
 </header>
       <div class="outer">
-        <section id="main"><article id="post-SMT币BatchOverflow漏洞分析笔记" class="article article-type-post" itemscope itemprop="blogPost">
+        <section id="main"><article id="post-在私有以太坊上实现针对ERC20数字货币ProxyOverflow漏洞的攻击" class="article article-type-post" itemscope itemprop="blogPost">
   <div class="article-meta">
-    <a href="/2018/05/10/SMT币BatchOverflow漏洞分析笔记/" class="article-date">
-  <time datetime="2018-05-10T02:44:52.000Z" itemprop="datePublished">2018-05-10</time>
+    <a href="/2018/05/10/在私有以太坊上实现针对ERC20数字货币ProxyOverflow漏洞的攻击/" class="article-date">
+  <time datetime="2018-05-10T06:36:34.000Z" itemprop="datePublished">2018-05-10</time>
 </a>
     
   </div>
@@ -82,7 +82,7 @@
         
   
     <h1 class="article-title" itemprop="name">
-      SMT币BatchOverflow漏洞分析笔记
+      在私有以太坊上实现针对ERC20数字货币ProxyOverflow漏洞的攻击
     </h1>
   
 
@@ -103,7 +103,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://hikame.github.io/2018/05/10/SMT币BatchOverflow漏洞分析笔记/" data-id="cjh05uaa20000ofvx2hr0rtq0" class="article-share-link">Share</a>
+      <a data-url="http://hikame.github.io/2018/05/10/在私有以太坊上实现针对ERC20数字货币ProxyOverflow漏洞的攻击/" data-id="cjh05uaa80001ofvxqhrr2cyy" class="article-share-link">Share</a>
       
       
     </footer>
@@ -112,15 +112,11 @@
     
 <nav id="article-nav">
   
-    <a href="/2018/05/10/在私有以太坊上实现针对ERC20数字货币ProxyOverflow漏洞的攻击/" id="article-nav-newer" class="article-nav-link-wrap">
-      <strong class="article-nav-caption">Newer</strong>
-      <div class="article-nav-title">
-        
-          在私有以太坊上实现针对ERC20数字货币ProxyOverflow漏洞的攻击
-        
-      </div>
-    </a>
   
+    <a href="/2018/05/10/SMT币BatchOverflow漏洞分析笔记/" id="article-nav-older" class="article-nav-link-wrap">
+      <strong class="article-nav-caption">Older</strong>
+      <div class="article-nav-title">SMT币BatchOverflow漏洞分析笔记</div>
+    </a>
   
 </nav>
 
